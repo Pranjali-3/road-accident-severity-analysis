@@ -111,9 +111,7 @@ plt.pie(
     autopct="%1.1f%%",
     startangle=90,
     explode=[0.05]*len(gender_counts),  
-    wedgeprops={"edgecolor":"black"}
-)
+    wedgeprops={"edgecolor":"black"})
 plt.title("Distribution of Drivers by Gender", fontsize=15, fontweight="bold")
 plt.tight_layout()
 plt.show()
-
