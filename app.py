@@ -1,17 +1,16 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-
-# =====================================================
-# PAGE CONFIG
-# =====================================================
+import joblib
+import warnings
+warnings.filterwarnings("ignore")
 
 st.set_page_config(
     page_title="Road Accident Severity Dashboard",
     page_icon="🚗",
     layout="wide"
 )
-
 # =====================================================
 # LOAD DATA
 # =====================================================
@@ -21,362 +20,476 @@ def load_data():
     return pd.read_csv("Road.csv")
 
 df = load_data()
-
+# =====================================================
+# LOAD MODEL FILES
+# =====================================================
+model = joblib.load("model.pkl")
+label_encoder = joblib.load("label_encoder.pkl")
+feature_order = joblib.load("feature_order.pkl")
 # =====================================================
 # SIDEBAR
 # =====================================================
-
-st.sidebar.title("🚗 Road Accident Dashboard")
-
+st.sidebar.title("🚗 Navigation")
 page = st.sidebar.radio(
-    "Navigation",
+    "Go To",
     [
-        "🏠 Home",
-        "📊 Data Visualization",
-        "🚗 Accident Prediction",
-        "ℹ About"
+        "Home",
+        "Data Visualization",
+        "Accident Prediction",
+        "About"
     ]
 )
-
 # =====================================================
 # HOME PAGE
 # =====================================================
 
-if page == "🏠 Home":
-
+if page == "Home":
     st.title("🚗 Road Accident Severity Prediction System")
+    st.markdown("---")
+    st.header("Project Description")
+    st.write(
+        """
+        This project predicts the severity of road accidents using
+        Machine Learning techniques.
 
-    st.markdown("""
-### Department of Computer Science & Engineering (AI & ML)
+        The dataset contains various accident-related attributes
+        including weather conditions, road surface, light conditions,
+        driver information, vehicle information and accident details.
 
-**University:** JSS Academy of Technical Education, Noida
+        Multiple ML algorithms were tested including:
 
----
+        - Logistic Regression
+        - Random Forest
+        - LightGBM
+        - CatBoost
+        - XGBoost
 
-### Project Description
+        The final deployed model is the **Enhanced XGBoost Model**
+        which achieved approximately **85.23% accuracy**.
+        """
+    )
+    st.markdown("---")
 
-This project analyzes road accident data to understand the factors affecting accident severity.
+    st.subheader("Project Team")
 
-Machine Learning techniques are used to classify accidents into different severity levels based on:
+    st.write("**Department:** Computer Science & Engineering (AI & ML)")
+    st.write("**College:** JSS Academy of Technical Education, Noida")
 
-- Driver Information
-- Weather Conditions
-- Road Surface
-- Vehicle Details
-- Environmental Factors
-
----
-
-### Best Performing Model
-
-✅ Enhanced XGBoost
-
-### Accuracy
-
-**85.23%**
-
----
-
-### Team Members
-
-- Pranjali
-- Mahi Gupta
-- Kanishka Patwal
-""")
-
-# =====================================================
-# DATA VISUALIZATION
+    st.write("### Team Members")
+    st.write("• Pranjali")
+    st.write("• Mahi Gupta")
+    st.write("• Kanishka Patwal")
+    st.markdown("---")
+    st.success("Use the navigation panel to explore the dashboard.")
+    # =====================================================
+# DATA VISUALIZATION PAGE
 # =====================================================
 
-elif page == "📊 Data Visualization":
+elif page == "Data Visualization":
 
-    st.title("📊 Road Accident Analysis Dashboard")
+    st.title("📊 Data Visualization Dashboard")
 
-    st.info(
-        "Use the filters on the left to explore accident patterns."
+    st.markdown("---")
+
+    st.subheader("Dataset Preview")
+
+    st.dataframe(df.head())
+
+    st.markdown("---")
+
+    st.subheader("Dataset Information")
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Rows", df.shape[0])
+    col2.metric("Columns", df.shape[1])
+    col3.metric("Missing Values", int(df.isnull().sum().sum()))
+
+    st.markdown("---")
+
+    chart = st.selectbox(
+        "Select Visualization",
+        (
+            "Accident Severity Distribution",
+            "Weather Conditions",
+            "Road Surface Type",
+            "Driver Gender",
+            "Light Conditions",
+            "Age Band of Driver",
+            "Time vs Severity"
+        )
     )
-
-    # ---------------- Sidebar Filters ----------------
-
-    st.sidebar.header("🔍 Filters")
-
-    gender = st.sidebar.selectbox(
-        "Driver Gender",
-        ["All"] + sorted(df["Sex_of_driver"].dropna().unique())
-    )
-
-    severity = st.sidebar.selectbox(
-        "Accident Severity",
-        ["All"] + sorted(df["Accident_severity"].dropna().unique())
-    )
-
-    weather = st.sidebar.selectbox(
-        "Weather Condition",
-        ["All"] + sorted(df["Weather_conditions"].dropna().unique())
-    )
-
-    vehicle = st.sidebar.selectbox(
-        "Vehicle Type",
-        ["All"] + sorted(df["Type_of_vehicle"].dropna().unique())
-    )
-
-    days = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday"
-    ]
-
-    available_days = [
-        d for d in days
-        if d in df["Day_of_week"].unique()
-    ]
-
-    day = st.sidebar.selectbox(
-        "Day of Week",
-        ["All"] + available_days
-    )
-
-    # ---------------- Filtering ----------------
-
-    filtered_df = df.copy()
-
-    if gender != "All":
-        filtered_df = filtered_df[
-            filtered_df["Sex_of_driver"] == gender
-        ]
-
-    if severity != "All":
-        filtered_df = filtered_df[
-            filtered_df["Accident_severity"] == severity
-        ]
-
-    if weather != "All":
-        filtered_df = filtered_df[
-            filtered_df["Weather_conditions"] == weather
-        ]
-
-    if vehicle != "All":
-        filtered_df = filtered_df[
-            filtered_df["Type_of_vehicle"] == vehicle
-        ]
-
-    if day != "All":
-        filtered_df = filtered_df[
-            filtered_df["Day_of_week"] == day
-        ]
-
-    if filtered_df.empty:
-        st.warning("No data available for selected filters.")
-        st.stop()
 
     # =====================================================
-    # KPI CARDS
+    # ACCIDENT SEVERITY
     # =====================================================
 
-    st.subheader("📈 Dashboard Summary")
+    if chart == "Accident Severity Distribution":
 
-    fatal = len(filtered_df[
-        filtered_df["Accident_severity"] == "Fatal injury"
-    ])
+        fig, ax = plt.subplots(figsize=(7,5))
 
-    serious = len(filtered_df[
-        filtered_df["Accident_severity"] == "Serious Injury"
-    ])
+        df["Accident_severity"].value_counts().plot(
+            kind="bar",
+            ax=ax
+        )
 
-    slight = len(filtered_df[
-        filtered_df["Accident_severity"] == "Slight Injury"
-    ])
+        ax.set_title("Accident Severity Distribution")
+        ax.set_xlabel("Severity")
+        ax.set_ylabel("Count")
 
-    c1, c2, c3, c4 = st.columns(4)
+        st.pyplot(fig)
 
-    c1.metric("🚗 Total Accidents", len(filtered_df))
-    c2.metric("💀 Fatal", fatal)
-    c3.metric("⚠ Serious", serious)
-    c4.metric("🩹 Slight", slight)
-
-    st.divider()
+        st.info(
+            "This graph shows the frequency of each accident severity level."
+        )
 
     # =====================================================
-    # GRAPH ROW 1
+    # WEATHER
     # =====================================================
+
+    elif chart == "Weather Conditions":
+
+        fig, ax = plt.subplots(figsize=(8,8))
+
+        df["Weather_conditions"].value_counts().plot(
+            kind="pie",
+            autopct="%1.1f%%",
+            ax=ax
+        )
+
+        ax.set_ylabel("")
+
+        st.pyplot(fig)
+
+        st.info(
+            "Weather conditions at the time of accidents."
+        )
+
+    # =====================================================
+    # ROAD SURFACE
+    # =====================================================
+
+    elif chart == "Road Surface Type":
+
+        fig, ax = plt.subplots(figsize=(8,5))
+
+        df["Road_surface_conditions"].value_counts().plot(
+            kind="bar",
+            ax=ax
+        )
+
+        ax.set_title("Road Surface Conditions")
+
+        st.pyplot(fig)
+
+    # =====================================================
+    # DRIVER GENDER
+    # =====================================================
+
+    elif chart == "Driver Gender":
+
+        fig, ax = plt.subplots(figsize=(7,7))
+
+        df["Sex_of_driver"].value_counts().plot(
+            kind="pie",
+            autopct="%1.1f%%",
+            ax=ax
+        )
+
+        ax.set_ylabel("")
+
+        st.pyplot(fig)
+
+    # =====================================================
+    # LIGHT CONDITIONS
+    # =====================================================
+
+    elif chart == "Light Conditions":
+
+        fig, ax = plt.subplots(figsize=(8,5))
+
+        df["Light_conditions"].value_counts().plot(
+            kind="bar",
+            ax=ax
+        )
+
+        ax.set_title("Light Conditions")
+
+        st.pyplot(fig)
+
+    # =====================================================
+    # AGE BAND
+    # =====================================================
+
+    elif chart == "Age Band of Driver":
+
+        fig, ax = plt.subplots(figsize=(8,5))
+
+        df["Age_band_of_driver"].value_counts().plot(
+            kind="bar",
+            ax=ax
+        )
+
+        ax.set_title("Age Band of Drivers")
+
+        st.pyplot(fig)
+
+    # =====================================================
+    # TIME VS SEVERITY
+    # =====================================================
+
+    elif chart == "Time vs Severity":
+
+        df2 = df.copy()
+
+        df2["Hour"] = pd.to_datetime(
+            df2["Time"],
+            errors="coerce"
+        ).dt.hour
+        ctab = pd.crosstab(
+            df2["Hour"],
+            df2["Accident_severity"]
+        )
+        fig, ax = plt.subplots(figsize=(10,5))
+        ctab.plot(
+            kind="bar",
+            ax=ax
+        )
+        ax.set_xlabel("Hour")
+        ax.set_ylabel("Accidents")
+        ax.set_title("Time vs Severity")
+        st.pyplot(fig)
+        # =====================================================
+# ACCIDENT PREDICTION PAGE
+# =====================================================
+
+elif page == "Accident Prediction":
+
+    st.title("🤖 Accident Severity Prediction")
+
+    st.markdown(
+        """
+        Enter the accident details below and click **Predict Severity**.
+        """
+    )
+
+    st.markdown("---")
 
     col1, col2 = st.columns(2)
 
     with col1:
 
-        st.subheader("Accident Severity Distribution")
-
-        severity_count = filtered_df[
-            "Accident_severity"
-        ].value_counts()
-
-        fig, ax = plt.subplots(figsize=(6,4))
-
-        severity_count.plot(
-            kind="bar",
-            color=["red","orange","green"],
-            ax=ax
+        age = st.selectbox(
+            "Age Band of Driver",
+            sorted(df["Age_band_of_driver"].dropna().unique())
         )
 
-        ax.set_xlabel("Severity")
-        ax.set_ylabel("Accidents")
-        ax.tick_params(axis='x', rotation=20)
+        sex = st.selectbox(
+            "Sex of Driver",
+            sorted(df["Sex_of_driver"].dropna().unique())
+        )
 
-        st.pyplot(fig)
+        education = st.selectbox(
+            "Educational Level",
+            sorted(df["Educational_level"].dropna().unique())
+        )
+
+        experience = st.selectbox(
+            "Driving Experience",
+            sorted(df["Driving_experience"].dropna().unique())
+        )
+
+        vehicle = st.selectbox(
+            "Type of Vehicle",
+            sorted(df["Type_of_vehicle"].dropna().unique())
+        )
+
+        owner = st.selectbox(
+            "Owner of Vehicle",
+            sorted(df["Owner_of_vehicle"].dropna().unique())
+        )
+
+        service = st.selectbox(
+            "Service Year",
+            sorted(df["Service_year_of_vehicle"].dropna().unique())
+        )
 
     with col2:
 
-        st.subheader("Driver Gender Distribution")
-
-        gender_count = filtered_df[
-            "Sex_of_driver"
-        ].value_counts()
-
-        fig, ax = plt.subplots(figsize=(6,6))
-
-        ax.pie(
-            gender_count,
-            labels=gender_count.index,
-            autopct="%1.1f%%",
-            startangle=90,
-            wedgeprops={"edgecolor":"black"}
+        weather = st.selectbox(
+            "Weather Conditions",
+            sorted(df["Weather_conditions"].dropna().unique())
         )
 
-        st.pyplot(fig)
-
-    # =====================================================
-    # GRAPH ROW 2
-    # =====================================================
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-
-        st.subheader("Weather Condition Distribution")
-
-        weather_count = filtered_df[
-            "Weather_conditions"
-        ].value_counts()
-
-        fig, ax = plt.subplots(figsize=(6,4))
-
-        weather_count.plot(
-            kind="bar",
-            color="skyblue",
-            ax=ax
+        road = st.selectbox(
+            "Road Surface",
+            sorted(df["Road_surface_conditions"].dropna().unique())
         )
 
-        ax.tick_params(axis='x', rotation=45)
-
-        st.pyplot(fig)
-
-    with col4:
-
-        st.subheader("Accidents by Day")
-
-        day_count = filtered_df[
-            "Day_of_week"
-        ].value_counts().reindex(days)
-
-        fig, ax = plt.subplots(figsize=(6,4))
-
-        ax.plot(
-            day_count.index,
-            day_count.values,
-            marker="o",
-            linewidth=3
+        light = st.selectbox(
+            "Light Conditions",
+            sorted(df["Light_conditions"].dropna().unique())
         )
 
-        ax.grid(True)
-
-        st.pyplot(fig)
-
-    # =====================================================
-    # GRAPH ROW 3
-    # =====================================================
-
-    col5, col6 = st.columns(2)
-
-    with col5:
-
-        st.subheader("Top 10 Vehicle Types")
-
-        vehicle_count = filtered_df[
-            "Type_of_vehicle"
-        ].value_counts().head(10).sort_values()
-
-        fig, ax = plt.subplots(figsize=(6,4))
-
-        vehicle_count.plot(
-            kind="barh",
-            color="teal",
-            ax=ax
+        junction = st.selectbox(
+            "Junction Type",
+            sorted(df["Types_of_Junction"].dropna().unique())
         )
 
-        st.pyplot(fig)
-
-    with col6:
-
-        st.subheader("Top 10 Causes of Accidents")
-
-        cause_count = filtered_df[
-            "Cause_of_accident"
-        ].value_counts().head(10).sort_values()
-
-        fig, ax = plt.subplots(figsize=(6,4))
-
-        cause_count.plot(
-            kind="barh",
-            color="tomato",
-            ax=ax
+        collision = st.selectbox(
+            "Collision Type",
+            sorted(df["Type_of_collision"].dropna().unique())
         )
 
-        st.pyplot(fig)
+        cause = st.selectbox(
+            "Cause of Accident",
+            sorted(df["Cause_of_accident"].dropna().unique())
+        )
 
-# =====================================================
-# PREDICTION PAGE
-# =====================================================
+        hour = st.slider(
+            "Hour of Accident",
+            0,
+            23,
+            12
+        )
 
-elif page == "🚗 Accident Prediction":
+    st.markdown("---")
 
-    st.title("🚗 Accident Severity Prediction")
-
-    st.info(
-        "Machine Learning prediction module will be integrated after model deployment."
+    predict = st.button(
+        "🚗 Predict Severity",
+        use_container_width=True
     )
 
+    if predict:
+
+        user_df = pd.DataFrame([{
+            "Age_band_of_driver": age,
+            "Sex_of_driver": sex,
+            "Educational_level": education,
+            "Driving_experience": experience,
+            "Type_of_vehicle": vehicle,
+            "Owner_of_vehicle": owner,
+            "Service_year_of_vehicle": service,
+            "Weather_conditions": weather,
+            "Road_surface_conditions": road,
+            "Light_conditions": light,
+            "Types_of_Junction": junction,
+            "Type_of_collision": collision,
+            "Cause_of_accident": cause,
+            "Hour": hour
+        }])
+
+        # -----------------------------
+        # Feature Engineering
+        # -----------------------------
+
+        user_df["Hour_Sin"] = np.sin(
+            2 * np.pi * user_df["Hour"] / 24
+        )
+
+        user_df["Hour_Cos"] = np.cos(
+            2 * np.pi * user_df["Hour"] / 24
+        )
+
+        user_df["Rush_Hour"] = (
+            (
+                (user_df["Hour"] >= 7)
+                &
+                (user_df["Hour"] <= 10)
+            )
+            |
+            (
+                (user_df["Hour"] >= 16)
+                &
+                (user_df["Hour"] <= 19)
+            )
+        ).astype(int)
+
+        # One-Hot Encoding
+
+        user_df = pd.get_dummies(user_df)
+
+        # Match training features
+
+        for col in feature_order:
+
+            if col not in user_df.columns:
+                user_df[col] = 0
+
+        user_df = user_df[feature_order]
+        prediction = model.predict(user_df)
+        prediction = label_encoder.inverse_transform(prediction)
+        st.success(
+            f"### Predicted Severity : {prediction[0]}"
+        )
+        # =====================================================
+# ABOUT PAGE
 # =====================================================
-# ABOUT
-# =====================================================
 
-elif page == "ℹ About":
+elif page == "About":
 
-    st.title("ℹ About This Project")
+    st.title("ℹ️ About This Project")
 
-    st.markdown("""
-### Road Accident Severity Prediction System
+    st.markdown("---")
 
-This project was developed to analyze road accident data and identify patterns affecting accident severity.
+    st.header("Road Accident Severity Prediction")
 
-### Technologies Used
+    st.write("""
+    This project predicts the severity of road accidents using
+    Machine Learning techniques.
 
-- Python
-- Streamlit
-- Pandas
-- NumPy
-- Matplotlib
-- Scikit-Learn
-- XGBoost
-- LightGBM
+    It was developed as part of the B.Tech AI & ML curriculum.
 
----
+    The dashboard allows users to:
 
-### Best Model
-Enhanced XGBoost
-### Accuracy
-**85.23%**
-""")
+    • Explore the accident dataset
+
+    • View different visualizations
+
+    • Predict accident severity using the trained model
+
+    • Understand accident patterns and risk factors
+    """)
+
+    st.markdown("---")
+
+    st.subheader("Machine Learning Model")
+
+    st.write("""
+    **Algorithm Used**
+
+    - XGBoost Classifier
+
+    **Libraries**
+
+    - Pandas
+    - NumPy
+    - Matplotlib
+    - Scikit-Learn
+    - XGBoost
+    - Streamlit
+
+    **Model Accuracy**
+
+    Approximately **85.23%**
+    """)
+
+    st.markdown("---")
+
+    st.subheader("Dataset Features")
+
+    st.write("""
+    - Driver Information
+    - Vehicle Information
+    - Weather Conditions
+    - Road Surface
+    - Light Conditions
+    - Junction Type
+    - Collision Type
+    - Cause of Accident
+    - Time Information
+    """)
+
+    st.markdown("---")
+
+    st.success("Developed by Team: Pranjali • Mahi Gupta • Kanishka Patwal")
