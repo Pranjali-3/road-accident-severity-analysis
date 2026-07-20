@@ -944,6 +944,11 @@ elif page == "Accident Prediction":
         # ------------------------------------------------
         # PREDICTION
         # ------------------------------------------------
+        st.write("User DF Shape:", user_df.shape)
+        st.write("Expected Features:", len(feature_order))
+        st.write("Actual Features:", len(user_df.columns))
+        st.write("Missing Features:", set(feature_order) - set(user_df.columns))
+        st.write("Extra Features:", set(user_df.columns) - set(feature_order))
         prediction = model.predict(user_df)
         proba = model.predict_proba(user_df)[0]
         predicted_label = label_encoder.inverse_transform(prediction)[0]
