@@ -951,6 +951,10 @@ elif page == "Accident Prediction":
         st.write("Extra Features:", set(user_df.columns) - set(feature_order))
         prediction = model.predict(user_df)
         proba = model.predict_proba(user_df)[0]
+        st.write("Raw Prediction:", prediction)
+        st.write("Prediction Probabilities:", proba)
+        st.write("Model Classes:", model.classes_)
+        st.write("Label Encoder Classes:", label_encoder.classes_)
         predicted_label = label_encoder.inverse_transform(prediction)[0]
         confidence = float(proba.max())
         class_labels = label_encoder.classes_
