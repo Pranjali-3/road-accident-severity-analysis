@@ -761,6 +761,22 @@ elif page == "Accident Prediction":
         }])
 
         # ------------------------------------------------
+        # STRIP WHITESPACE (matches notebook cleaning)
+        # ------------------------------------------------
+        str_cols = [
+            "Age_band_of_driver", "Type_of_vehicle", "Road_surface_type",
+            "Weather_conditions", "Light_conditions", "Area_accident_occured",
+            "Driving_experience", "Types_of_Junction", "Lanes_or_Medians",
+            "Road_allignment", "Road_surface_conditions", "Day_of_week",
+            "Sex_of_driver", "Vehicle_driver_relation", "Owner_of_vehicle",
+            "Service_year_of_vehicle", "Cause_of_accident", "Type_of_collision",
+            "Vehicle_movement", "Pedestrian_movement"
+        ]
+        for c in str_cols:
+            if c in user_df.columns:
+                user_df[c] = user_df[c].astype(str).str.strip()
+
+        # ------------------------------------------------
         # FEATURE ENGINEERING (must match notebook exactly)
         # ------------------------------------------------
 
@@ -926,7 +942,7 @@ elif page == "Accident Prediction":
         )
 
         # --- One-Hot Encode ---
-        user_df = pd.get_dummies(user_df, drop_first=True)
+        user_df = pd.get_dummies(user_df, drop_first=False)
         user_df.columns = (
             user_df.columns.astype(str)
             .str.replace(r"[^A-Za-z0-9_]", "_", regex=True)
@@ -944,17 +960,8 @@ elif page == "Accident Prediction":
         # ------------------------------------------------
         # PREDICTION
         # ------------------------------------------------
-        st.write("User DF Shape:", user_df.shape)
-        st.write("Expected Features:", len(feature_order))
-        st.write("Actual Features:", len(user_df.columns))
-        st.write("Missing Features:", set(feature_order) - set(user_df.columns))
-        st.write("Extra Features:", set(user_df.columns) - set(feature_order))
         prediction = model.predict(user_df)
         proba = model.predict_proba(user_df)[0]
-        st.write("Raw Prediction:", prediction)
-        st.write("Prediction Probabilities:", proba)
-        st.write("Model Classes:", model.classes_)
-        st.write("Label Encoder Classes:", label_encoder.classes_)
         predicted_label = label_encoder.inverse_transform(prediction)[0]
         confidence = float(proba.max())
         class_labels = label_encoder.classes_
