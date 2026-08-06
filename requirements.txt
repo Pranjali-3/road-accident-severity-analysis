@@ -10,4 +10,4 @@ xgboost
 lightgbm
 catboost
 joblib
-torch
+torch --index-url https://download.pytorch.org/whl/cpu
