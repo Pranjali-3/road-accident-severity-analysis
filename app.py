@@ -1040,6 +1040,22 @@ elif page == "Accident Prediction":
             prediction = np.array([1])
         else:
             prediction = np.array([2])
+
+        # Risk-based override: force upward when extreme risk factors detected
+        extreme_risk_count = sum([
+            user_df["High_Risk_Driver"].values[0] == 1,
+            user_df["Late_Night"].values[0] == 1,
+            user_df["Poor_Visibility"].values[0] == 1,
+            user_df["Wet_Night"].values[0] == 1,
+            user_df["Heavy_Traffic"].values[0] == 1,
+            user_df["Old_Vehicle_Inexperienced_Driver"].values[0] == 1,
+            user_df["Complex_Road"].values[0] == 1,
+            user_df["Severe_Driving_Context"].values[0] == 1,
+        ])
+        if extreme_risk_count >= 5:
+            prediction = np.array([0])
+        elif extreme_risk_count >= 4 and prediction[0] == 2:
+            prediction = np.array([1])
             
         predicted_label = label_encoder.inverse_transform(prediction)[0]
         confidence = float(proba[prediction[0]])
