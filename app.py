@@ -61,7 +61,7 @@ mlp_model.eval()
 
 # Tuned blending ensemble parameters
 w_xgb, w_lgb, w_mlp = 0.35, 0.45, 0.20
-t_fatal = 0.0500   # Lowered from 0.09 for better fatal recall
+t_fatal = 0.0500
 t_serious = 0.3500
 # =====================================================
 # PRECOMPUTE FREQUENCY MAPS (from full dataset)
