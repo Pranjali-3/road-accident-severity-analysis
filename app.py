@@ -60,7 +60,7 @@ mlp_model.load_state_dict(torch.load("model_mlp.pt", map_location=torch.device('
 mlp_model.eval()
 
 # Tuned blending ensemble parameters
-w_xgb, w_lgb, w_mlp = 0.35, 0.45, 0.20
+w_xgb, w_lgb, w_mlp = 0.45, 0.25, 0.30
 t_fatal = 0.0500
 t_serious = 0.3500
 # =====================================================
