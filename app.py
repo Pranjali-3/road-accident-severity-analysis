@@ -47,11 +47,12 @@ class AccidentSeverityMLP(nn.Module):
         return self.fc(x)
 
 # Load machine learning models
-model = joblib.load("model.pkl")          # XGBoost
+model = joblib.load("model.pkl")          # XGBoost (retrained with class weights)
 model_lgb = joblib.load("model_lgb.pkl")  # LightGBM
 scaler = joblib.load("scaler.pkl")        # StandardScaler
 label_encoder = joblib.load("label_encoder.pkl")
 feature_order = joblib.load("feature_order.pkl")
+imputer = joblib.load("imputer.pkl")      # Imputer for missing values
 
 # Load PyTorch model weights
 mlp_model = AccidentSeverityMLP(input_dim=len(feature_order))
@@ -60,7 +61,7 @@ mlp_model.eval()
 
 # Tuned blending ensemble parameters
 w_xgb, w_lgb, w_mlp = 0.35, 0.45, 0.20
-t_fatal = 0.0900
+t_fatal = 0.0500   # Lowered from 0.09 for better fatal recall
 t_serious = 0.3500
 # =====================================================
 # PRECOMPUTE FREQUENCY MAPS (from full dataset)
@@ -539,6 +540,9 @@ elif page == "Model Comparison":
             if col not in X_all.columns:
                 X_all[col] = 0
         X_all = X_all[feature_order]
+        
+        # Impute missing values
+        X_all = pd.DataFrame(imputer.transform(X_all), columns=feature_order)
 
         le_temp = joblib.load("label_encoder.pkl")
         y_enc = le_temp.transform(y_all)
@@ -1008,6 +1012,9 @@ elif page == "Accident Prediction":
             if col not in user_df.columns:
                 user_df[col] = 0
         user_df = user_df[feature_order]
+        
+        # Impute missing values
+        user_df = pd.DataFrame(imputer.transform(user_df), columns=feature_order)
 
         # ------------------------------------------------
         # PREDICTION using Hybrid Blending Ensemble
